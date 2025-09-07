@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>9/21 イベント準備ダッシュボード</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: アプリケーションは、情報を「ダッシュボード」「役割分担」「重要事項」「会場アクセス」の4つのタブに整理したダッシュボード形式を採用します。この構造は、イベントスタッフが目的の情報（例：個人のタスク、集合場所、持ち物）へ迅速にアクセスできるよう設計されています。直線的なレポート形式ではなく、関心事に応じて情報を探索できるため、ユーザビリティが大幅に向上します。インタラクションとして、役割分担タブに担当者名での絞り込み機能を実装し、個人のタスク確認を容易にします。 -->
+    <!-- Visualization & Content Choices: 
+        - 概要: [目的] イベントの全体像を即時把握 -> [表示方法] 主要情報のカード表示とChart.jsによるタスク数の棒グラフ -> [インタラクション] なし -> [正当性] イベントの日付、場所、タスク量を一目で理解できる。
+        - 役割分担: [目的] 各担当者のタスクを明確化 -> [表示方法] HTMLテーブル -> [インタラクション] 担当者名によるフィルタリング機能（JavaScript） -> [正当性] スタッフが自身の役割を素早く、間違いなく確認できる。
+        - 重要事項: [目的] 物流や備品などの補足情報を伝達 -> [表示方法] アイコン付きのカード形式グリッド（HTML/CSS） -> [インタラクション] なし -> [正当性] 箇条書きよりも視覚的に情報を整理し、記憶しやすくする。
+        - 会場アクセス: [目的] 場所のコンテキストを提供 -> [表示方法] 地図画像と補足テキスト（HTML） -> [インタラクション] なし -> [正当性] 集合場所と会場へのルートを明確に示し、当日の混乱を防ぐ。
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #FDFBF8;
+            color: #3C3C3C;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            border-bottom-color: #A37E63;
+            color: #A37E63;
+            font-weight: 600;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            transition: transform 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-[#A37E63]">9/21 イベント準備ダッシュボード</h1>
+            <p class="text-gray-500 mt-2">ミーティングの決定事項をインタラクティブに確認</p>
+        </header>
+
+        <nav class="mb-8 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
+                <li class="mr-2">
+                    <button class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 active" data-tab="dashboard">ダッシュボード</button>
+                </li>
+                <li class="mr-2">
+                    <button class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab="roles">役割分担</button>
+                </li>
+                <li class="mr-2">
+                    <button class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab="details">重要事項</button>
+                </li>
+                <li>
+                    <button class="tab-button inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300" data-tab="maps">会場アクセス</button>
+                </li>
+            </ul>
+        </nav>
+
+        <main>
+            <div id="dashboard" class="tab-content">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-700">イベント概要</h2>
+                    <p class="text-gray-600 mb-6">このセクションでは、イベントの最も重要な情報を一目で確認できます。開催日、主要な場所、そして準備のタスク配分を視覚的に把握し、全体のスケジュール感を掴むことができます。</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                        <div class="card">
+                            <h3 class="text-lg font-semibold text-gray-500 mb-2">開催日</h3>
+                            <p class="text-3xl font-bold text-[#A37E63]">9/21 (日)</p>
+                        </div>
+                        <div class="card">
+                            <h3 class="text-lg font-semibold text-gray-500 mb-2">会場</h3>
+                            <p class="text-2xl font-bold text-[#A37E63]">C2棟 S201</p>
+                            <p class="text-sm text-gray-500">ブース番号7</p>
+                        </div>
+                        <div class="card">
+                            <h3 class="text-lg font-semibold text-gray-500 mb-2">参加スタッフ</h3>
+                            <p class="text-3xl font-bold text-[#A37E63]" id="staffCount">10名</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                     <h2 class="text-2xl font-semibold mb-4 text-gray-700">準備タスク状況</h2>
+                     <div class="card">
+                        <div class="chart-container">
+                            <canvas id="tasksChart"></canvas>
+                        </div>
+                     </div>
+                </div>
+            </div>
+
+            <div id="roles" class="tab-content hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">役割分担</h2>
+                <p class="text-gray-600 mb-6">ここでは、各担当者の具体的な役割とスケジュールを確認できます。下のドロップダウンメニューから自分の名前を選択すると、担当するタスクのみが表示され、前日と当日の動きをスムーズに把握できます。</p>
+                <div class="card">
+                    <div class="mb-4">
+                        <label for="staff-filter" class="block mb-2 text-sm font-medium text-gray-900">担当者で絞り込み:</label>
+                        <select id="staff-filter" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-[#A37E63] focus:border-[#A37E63] block w-full md:w-1/3 p-2.5">
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3">担当者名</th>
+                                    <th scope="col" class="px-6 py-3">9/20 (土) = 前日</th>
+                                    <th scope="col" class="px-6 py-3">9/21 (日) = 当日</th>
+                                    <th scope="col" class="px-6 py-3">当日係</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roles-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="details" class="tab-content hidden">
+                 <h2 class="text-2xl font-semibold mb-4 text-gray-700">重要事項</h2>
+                 <p class="text-gray-600 mb-6">このセクションでは、食事、経費、備品、物流など、イベント運営に関わる重要な決定事項をまとめています。各項目をカード形式で確認し、当日の運営に必要な情報を漏れなくチェックしてください。</p>
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">🍱</span>弁当</h3>
+                        <p>当日10個手配</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">💰</span>経費精算</h3>
+                        <p>大橋さんが担当</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">🎟️</span>整理券</h3>
+                        <p>市原さんが印刷</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">📋</span>Waiting List</h3>
+                        <p>市原さんが印刷し、受付に設置</p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">💻</span>機材</h3>
+                        <p>Scratch: Raspberry Pi、ディスプレイセットを3つ用意</p>
+                    </div>
+                     <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">🚫</span>ネットワーク</h3>
+                        <p>Wi-Fi利用、OSアップデートはしない</p>
+                    </div>
+                    <div class="card col-span-1 md:col-span-2 lg:col-span-3">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">🚚</span>物流</h3>
+                        <p class="font-semibold">車両: 柴田さんのスズキ・ソリオ（ブラウン）</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-600">
+                            <li><span class="font-semibold">前日:</span> はけで積み込み。</li>
+                            <li><span class="font-semibold">当日:</span> 朝8時に当日参加者がC棟脇で搬入を手伝う。</li>
+                        </ul>
+                    </div>
+                     <div class="card">
+                        <h3 class="text-xl font-semibold mb-2 flex items-center"><span class="mr-2">📐</span>レイアウト</h3>
+                        <p>現場の状況を優先して決定</p>
+                    </div>
+                 </div>
+            </div>
+            
+            <div id="maps" class="tab-content hidden">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700">会場アクセス</h2>
+                <p class="text-gray-600 mb-6">当日の集合場所とイベント会場の場所を地図で確認できます。特に朝の搬入集合場所は重要ですので、構内図をよく確認してください。会場図では、自分たちのブースの位置を把握しておきましょう。</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">構内図 (集合場所)</h3>
+                        <img src="uploaded:構内図.pdf" alt="構内図" class="w-full h-auto rounded-lg border">
+                        <div class="mt-4 p-4 bg-amber-50 rounded-lg">
+                            <p class="font-semibold text-amber-800">重要: 9/21(日) 朝8時</p>
+                            <p class="text-sm text-amber-700">C棟脇（図の赤丸付近）に集合。柴田さんの車から荷物を搬入します。</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">会場図 (ブース位置)</h3>
+                        <img src="https://i.imgur.com/gK2Bv2t.png" alt="会場図" class="w-full h-auto rounded-lg border">
+                        <div class="mt-4 p-4 bg-sky-50 rounded-lg">
+                             <p class="font-semibold text-sky-800">ブース情報</p>
+                             <p class="text-sm text-sky-700">C2棟 (S) 2階 S201教室、ブース番号は7です。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const staffData = [
+            { name: '桜井', dayBefore: '不参加', dayOf: 'PM', task: '午後受付人流' },
+            { name: '真鍋', dayBefore: '不参加', dayOf: '○8時 C棟脇集合', task: 'scratch説明' },
+            { name: '大橋', dayBefore: '○12時鍵開け、12時から、荷物を、柴田さんの車(路駐)に運ぶ、その後車で移動し13時説明会', dayOf: '○8時 C棟脇集合', task: 'ベンハム' },
+            { name: '小林', dayBefore: '○1400 ブース', dayOf: '不参加', task: 'なし' },
+            { name: '柴田', dayBefore: '○12時、はけに車つけ大橋、河野、荷物と一緒に説明会へ', dayOf: '○8時 C棟脇、車で搬入', task: 'ビデオモーション' },
+            { name: '若生', dayBefore: '不参加', dayOf: '○8時 C棟脇集合', task: 'scratch説明' },
+            { name: '河野', dayBefore: '○12時はけ集合荷物を、柴田さんの車(路駐)に運ぶ、その後車で移動し13時説明会', dayOf: '○8時 C棟脇集合', task: 'ベンハム' },
+            { name: '高橋', dayBefore: '不参加', dayOf: '不参加', task: 'なし' },
+            { name: '市原', dayBefore: '不参加', dayOf: '○8時 C棟脇集合', task: '受付、人流' },
+            { name: '川口', dayBefore: '不参加', dayOf: 'AM', task: '受付、人流' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab-button');
+            const contents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(item => item.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    contents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    document.getElementById(tab.dataset.tab).classList.remove('hidden');
+                });
+            });
+
+            const staffFilter = document.getElementById('staff-filter');
+            const rolesTableBody = document.getElementById('roles-table-body');
+
+            const populateTable = (filter = 'all') => {
+                rolesTableBody.innerHTML = '';
+                const filteredData = (filter === 'all') ? staffData : staffData.filter(s => s.name === filter);
+
+                filteredData.forEach(staff => {
+                    const row = document.createElement('tr');
+                    row.className = 'bg-white border-b hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${staff.name}</td>
+                        <td class="px-6 py-4">${staff.dayBefore}</td>
+                        <td class="px-6 py-4">${staff.dayOf}</td>
+                        <td class="px-6 py-4">${staff.task}</td>
+                    `;
+                    rolesTableBody.appendChild(row);
+                });
+            };
+
+            const populateFilter = () => {
+                staffFilter.innerHTML = '<option value="all">全員表示</option>';
+                staffData.forEach(staff => {
+                    const option = document.createElement('option');
+                    option.value = staff.name;
+                    option.textContent = staff.name;
+                    staffFilter.appendChild(option);
+                });
+            };
+
+            staffFilter.addEventListener('change', (e) => {
+                populateTable(e.target.value);
+            });
+            
+            document.getElementById('staffCount').textContent = `${staffData.length}名`;
+
+            populateFilter();
+            populateTable();
+
+            const tasksBefore = staffData.filter(s => s.dayBefore !== '不参加').length;
+            const tasksDuring = staffData.filter(s => s.dayOf !== '不参加').length;
+
+            const ctx = document.getElementById('tasksChart').getContext('2d');
+            const tasksChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['9/20 (前日)', '9/21 (当日)'],
+                    datasets: [{
+                        label: 'タスク担当者数',
+                        data: [tasksBefore, tasksDuring],
+                        backgroundColor: [
+                            'rgba(199, 163, 137, 0.6)',
+                            'rgba(163, 126, 99, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(199, 163, 137, 1)',
+                            'rgba(163, 126, 99, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: '日程別タスク担当者数'
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
